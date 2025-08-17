@@ -1,0 +1,84 @@
+1. The application will have a modal login screen, with the image of the user if no picture is provided a generic image will do
+   1. if the login is successful, proceed with process step 2 to step 4
+2. The main screen will give the administrator the following menus
+   1. User - where he/she can do CRUD operations to new or existing users, assign role/permission to the user. Role/Permission should use the least privilege concept.
+   2. Student - where he/she can do CRUD operations to new or existing students
+   3. Guardian - where he/she can do CRUD operations to new or existing guardian/parent
+   4. RFID 
+      a. Reader - where he/she can adjust/calibrate the RFID scanner if needed
+      b. Generator - where the system will generate a valid RFID to be used by the student.
+      NOTE: only one (1) RFID can be assigned per student
+   5. SMS Provider - where he/she can adjust/replace the current SMS provider, including the credentials that go along with the provider's api, you are to use semaphore for the provider
+   6. Log off/Exit - when clicked the either the user will be changed or the system will terminate
+3. The main screen will give the regular user the following menus
+   1. Student - where he/she can only retrieve and update
+      a. time in/out of the student
+      b. contact information of the student
+      c. other fields will require the administrator's approval
+   2. Guardian - where he/she can only retrieve and update
+      a. contact information of the guardian/parent
+4. The main screen will be of a grid format, the bottom area of the screen will display the username of the logged in user, the current time/date. the having the following fields visible on the body of the screen
+   1. Student:
+       a. ID
+       b. Firstname
+       c. Middlename
+       d. Lastname
+       e. Contact information
+          1. cellphone #
+          2. email address
+       f. Guardian/Parent's:
+          1. Firstname
+          2. Lastname
+          3. Contact information
+             1. cellphone #
+             2. email address
+        g. time in/out
+  logic:        
+       A. only one (1) row can be selected at a time
+       B. to view the student's information, user must double-click on the selected row
+       C. the student information will display a modal screen with the following fields
+          a. picture of the student (if picture is not provided use a generic image to display)
+          b. ID
+	  c. Firstname
+       	  d. Middlename
+ 	  e. Lastname
+	  f. Contact information
+       	     1. cellphone #
+             2. email address
+          g. time in/out
+          h. Guardian/Parent's:
+             1. Firstname
+             2. Lastname
+             3. Contact information
+                1. cellphone #
+                2. email address
+          i. Address (street/house #, barangay, municipality, city)
+       D. Time In/Out will be achieved by scanning the RFID image of the student using an RFID reader that the system generated
+       E. Once student is verified and his time in/out is captured
+          a. A templated SMS will be sent to the student's guardian/parent using the guardian/parent's cellphone number
+          b. The SMS will be sent via SEMAPHORE
+5. A windows service will launch another external screen that will display (with the all student fields are disabled):
+          a. Current time (running clock) that is displayed above the other fields of the external screen, and is centered.
+	  a. picture of the student (if picture is not provided use a generic image to display)
+          b. ID
+	  c. Firstname
+       	  d. Middlename
+ 	  e. Lastname
+	  f. Contact information
+       	     1. cellphone #
+             2. email address
+          g. time in/out
+             1. Time In/Out will be achieved by scanning the RFID card of the student using an RFID reader
+             2. Once student is verified and his time in/out is captured
+	          a. A templated SMS will be sent to the student's guardian/parent using the guardian/parent's cellphone number
+        	  b. The SMS will be sent via SEMAPHORE
+BACKEND:
+Use ADO.net for the database connection 
+Use SQL Server as the backend database for this project
+Create a single database for the entire project
+     Create tables and transaction tables as necessary
+     Create stored procedures for the CRUD method and other database processing tasks
+     Create functions as needed to simplify CRUD procedures
+     Do not forget to use Indexed tables to optimize query processing
+NOTE: 
+In all the above processes, do not forget to include validation checks, display messages (errors, successful processes, warnings, etc) to give the user
