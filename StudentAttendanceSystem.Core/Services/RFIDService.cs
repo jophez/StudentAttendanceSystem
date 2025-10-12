@@ -9,6 +9,7 @@ namespace StudentAttendanceSystem.Core.Services
         private IRFIDReader? _rfidReader;
         private bool _disposed = false;
 
+
         public event EventHandler<StudentAttendanceEventArgs>? StudentScanned;
         public event EventHandler<RFIDErrorEventArgs>? RFIDError;
         public event EventHandler<RFIDStatusEventArgs>? StatusChanged;
@@ -18,13 +19,16 @@ namespace StudentAttendanceSystem.Core.Services
 
         private readonly Func<string, Task<Student?>> _getStudentByRFID;
         private readonly Func<int, AttendanceType, Task<bool>> _recordAttendance;
+        private readonly IAttendanceRepository _attendanceRepository;
 
         public RFIDService(
             Func<string, Task<Student?>> getStudentByRFID,
-            Func<int, AttendanceType, Task<bool>> recordAttendance)
+            Func<int, AttendanceType, Task<bool>> recordAttendance,
+            IAttendanceRepository attendanceRepository)
         {
             _getStudentByRFID = getStudentByRFID;
             _recordAttendance = recordAttendance;
+            _attendanceRepository = attendanceRepository;
         }
 
         public async Task<bool> InitializeAsync()
@@ -32,7 +36,7 @@ namespace StudentAttendanceSystem.Core.Services
             try
             {
                 _rfidReader = new USBRFIDReader();
-                
+
                 _rfidReader.CardRead += OnCardRead;
                 _rfidReader.ReadError += RFIDError;
                 _rfidReader.StatusChanged += OnStatusChanged;
@@ -41,10 +45,10 @@ namespace StudentAttendanceSystem.Core.Services
             }
             catch (Exception ex)
             {
-                OnRFIDError(new RFIDErrorEventArgs 
-                { 
+                OnRFIDError(new RFIDErrorEventArgs
+                {
                     ErrorMessage = $"Failed to initialize RFID service: {ex.Message}",
-                    Exception = ex 
+                    Exception = ex
                 });
                 return false;
             }
@@ -54,9 +58,9 @@ namespace StudentAttendanceSystem.Core.Services
         {
             if (_rfidReader == null)
             {
-                OnRFIDError(new RFIDErrorEventArgs 
-                { 
-                    ErrorMessage = "RFID reader not initialized" 
+                OnRFIDError(new RFIDErrorEventArgs
+                {
+                    ErrorMessage = "RFID reader not initialized"
                 });
                 return false;
             }
@@ -87,36 +91,60 @@ namespace StudentAttendanceSystem.Core.Services
             {
                 // Look up student by RFID code
                 var student = await _getStudentByRFID(e.CardId);
-                
+
                 if (student != null)
                 {
-                    // Determine if this is time in or time out
-                    var attendanceType = DetermineAttendanceType(student);
-                    
-                    // Record attendance
-                    var success = await _recordAttendance(student.StudentId, attendanceType);
-                    
-                    if (success)
+                    try
                     {
-                        OnStudentScanned(new StudentAttendanceEventArgs
+                        // Use enhanced database-driven attendance type determination
+                        var attendanceType = await DetermineAttendanceTypeAsync(student);
+
+                        // Validate the proposed attendance action
+                        var validationResult = await _attendanceRepository.ValidateAttendanceActionAsync(
+                            student.StudentId, attendanceType);
+
+                        if (!validationResult.IsValid)
                         {
-                            Student = student,
-                            AttendanceType = attendanceType,
-                            ScanTime = e.ReadTime,
-                            RFIDCode = e.CardId,
-                            Success = true
-                        });
+                            OnRFIDError(new RFIDErrorEventArgs
+                            {
+                                ErrorMessage = validationResult.ValidationMessage
+                            });
+                            return;
+                        }
+
+                        // Record attendance
+                        var success = await _recordAttendance(student.StudentId, attendanceType);
+
+                        if (success)
+                        {
+                            OnStudentScanned(new StudentAttendanceEventArgs
+                            {
+                                Student = student,
+                                AttendanceType = attendanceType,
+                                ScanTime = e.ReadTime,
+                                RFIDCode = e.CardId,
+                                Success = true
+                            });
+                        }
+                        else
+                        {
+                            OnStudentScanned(new StudentAttendanceEventArgs
+                            {
+                                Student = student,
+                                AttendanceType = attendanceType,
+                                ScanTime = e.ReadTime,
+                                RFIDCode = e.CardId,
+                                Success = false,
+                                ErrorMessage = "Failed to record attendance"
+                            });
+                        }
                     }
-                    else
+                    catch (InvalidOperationException ioe)
                     {
-                        OnStudentScanned(new StudentAttendanceEventArgs
+                        // Business rule violation
+                        OnRFIDError(new RFIDErrorEventArgs
                         {
-                            Student = student,
-                            AttendanceType = attendanceType,
-                            ScanTime = e.ReadTime,
-                            RFIDCode = e.CardId,
-                            Success = false,
-                            ErrorMessage = "Failed to record attendance"
+                            ErrorMessage = ioe.Message
                         });
                     }
                 }
@@ -138,21 +166,79 @@ namespace StudentAttendanceSystem.Core.Services
             }
         }
 
-        private AttendanceType DetermineAttendanceType(Student student)
+        private async Task<AttendanceType> DetermineAttendanceTypeAsync(Student student)
         {
-            // Simple logic: alternate between time in and time out
-            // In a real system, you might check the last attendance record
-            // to determine if the student is currently "in" or "out"
-            var now = DateTime.Now;
-            
-            // If it's before noon, assume time in, otherwise time out
-            if (now.Hour < 12)
+            try
             {
-                return AttendanceType.TimeIn;
+                // Get current attendance status from database via repository
+                var status = await _attendanceRepository.GetStudentAttendanceStatusAsync(student.StudentId);
+
+                if (status != null)
+                {
+                    return ApplyAttendanceBusinessRules(status);
+                }
+                else
+                {
+                    // No attendance record found, apply fallback logic
+                    return ApplyTimeBasedFallback();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error and fall back to improved time-based logic
+                OnRFIDError(new RFIDErrorEventArgs
+                {
+                    ErrorMessage = $"Database error determining attendance type: {ex.Message}. Using fallback logic.",
+                    Exception = ex
+                });
+
+                return ApplyTimeBasedFallback();
+            }
+        }
+
+        // BUSINESS RULES - Applied based on database status
+        private AttendanceType ApplyAttendanceBusinessRules(StudentAttendanceStatus status)
+        {
+            // Business Rule 1: If student is OUT, next scan is TimeIn
+            if (status.CurrentStatus == "OUT")
+            {
+                return AttendanceType.IN;
+            }
+
+            // Business Rule 2: If student is IN, next scan is TimeOut
+            if (status.CurrentStatus == "IN")
+            {
+                return AttendanceType.OUT;
+            }
+
+            // Default fallback
+            return AttendanceType.IN;
+        }
+
+        // IMPROVED FALLBACK LOGIC - More sophisticated than original 12-hour rule
+        private AttendanceType ApplyTimeBasedFallback()
+        {
+            var now = DateTime.Now;
+            var timeOfDay = now.TimeOfDay;
+
+            // More sophisticated time-based logic as fallback
+            var morningStart = new TimeSpan(6, 0, 0);    // 6:00 AM
+            var morningEnd = new TimeSpan(10, 0, 0);     // 10:00 AM
+            var afternoonStart = new TimeSpan(13, 0, 0); // 1:00 PM  
+            var eveningEnd = new TimeSpan(18, 0, 0);     // 6:00 PM
+
+            if (timeOfDay >= morningStart && timeOfDay <= morningEnd)
+            {
+                return AttendanceType.IN; // Morning arrival window
+            }
+            else if (timeOfDay >= afternoonStart && timeOfDay <= eveningEnd)
+            {
+                return AttendanceType.OUT; // Afternoon/Evening departure window
             }
             else
             {
-                return AttendanceType.TimeOut;
+                // Off-hours - default to TimeIn for safety
+                return AttendanceType.IN;
             }
         }
 

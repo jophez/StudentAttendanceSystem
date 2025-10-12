@@ -140,7 +140,7 @@ namespace StudentAttendanceSystem.Core.Services
 
         private string CreateAttendanceMessage(Student student, AttendanceType attendanceType, DateTime scanTime)
         {
-            var typeText = attendanceType == AttendanceType.TimeIn ? "arrived at" : "left";
+            var typeText = attendanceType == AttendanceType.IN ? "arrived at" : "left";
             var timeText = scanTime.ToString("HH:mm");
             var dateText = scanTime.ToString("yyyy-MM-dd");
 
