@@ -16,6 +16,18 @@ namespace StudentAttendanceSystem.Service.Forms
         private readonly SMSRepository _smsRepository;
         private readonly RFIDService _rfidService;
         private NotificationService _notificationService;
+        private GroupBox grpContainer;
+        private GroupBox grpDateTime;
+        private GroupBox grpGradeSection;
+        private GroupBox grpStudentId;
+        private GroupBox grpFullName;
+        private GroupBox grpEmail;
+        private GroupBox grpPhone;
+        private GroupBox grpPerson;
+        private GroupBox grpRfid;
+        private GroupBox grpTimeInOut;
+        private GroupBox grpInstruct;
+        private Label lblGradeSection;
         private Label lblCurrentTime;
         private PictureBox picStudentImage;
         private Label lblStudentId;
@@ -96,6 +108,28 @@ namespace StudentAttendanceSystem.Service.Forms
             this.BackColor = Color.Navy;
             this.ForeColor = Color.White;
 
+            grpContainer = new GroupBox
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Navy,
+                ForeColor = Color.White,
+                Font = new Font("Arial", 12, FontStyle.Regular),
+                TabStop = false
+            };
+
+            grpDateTime = new GroupBox
+            {
+                Dock = DockStyle.None,
+                Height = 80,
+                BackColor = Color.DarkBlue,
+                ForeColor = Color.White,
+                Font = new Font("Arial", 12, FontStyle.Bold),
+                TabStop = false,
+                Location = new Point(1000, 700),
+                Text = "Current Date and Time",
+                Size = new Size(400, 80)
+            };
+
             // Current Time Label (centered at top)
             lblCurrentTime = new Label
             {
@@ -103,18 +137,55 @@ namespace StudentAttendanceSystem.Service.Forms
                 ForeColor = Color.Yellow,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Dock = DockStyle.Top,
-                Height = 60,
+                Height = 55,
                 Text = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+            };
+
+            lblGradeSection = new Label
+            {
+                Text = "", // Placeholder text
+                Font = new Font("Arial", 14, FontStyle.Bold),
+                ForeColor = Color.LightBlue,
+                Location = new Point(50, 30),
+                Height = 30,
+                Size = new Size(300, 30),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            grpGradeSection = new GroupBox
+            {
+                Dock = DockStyle.None,
+                Height = 80,
+                BackColor = Color.DarkBlue,
+                ForeColor = Color.White,
+                Font = new Font("Arial", 12, FontStyle.Bold),
+                TabStop = false,
+                Location = new Point(1000, 600),
+                Width = 300,
+                Text = "Grade / Section",
+                Size = new Size(400, 80)
+            };
+
+            grpInstruct = new GroupBox
+            {
+                Dock = DockStyle.None,
+                BackColor = Color.DarkBlue,
+                ForeColor = Color.White,
+                Font = new Font("Arial", 12, FontStyle.Bold),
+                TabStop = false,
+                Location = new Point(450, 155),
+                Text = "RFID status",
+                Size = new Size(500, 70)
             };
 
             // RFID Instruction
             lblRFIDInstruction = new Label
             {
                 Text = "Initializing RFID Scanner...",
-                Font = new Font("Arial", 16, FontStyle.Italic),
+                Font = new Font("Arial", 15, FontStyle.Italic),
                 ForeColor = Color.Orange,
-                Location = new Point(50, 80),
-                Size = new Size(600, 30),
+                Location = new Point(5, 20),
+                Size = new Size(450, 30),
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
@@ -126,73 +197,161 @@ namespace StudentAttendanceSystem.Service.Forms
                 ForeColor = Color.Gray,
                 Location = new Point(50, 110),
                 Size = new Size(800, 20),
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                Visible = false
             };
 
+            grpPerson = new GroupBox
+            {
+                Dock = DockStyle.None,
+                BackColor = Color.Navy,
+                ForeColor = Color.White,
+                Font = new Font("Arial", 12, FontStyle.Regular),
+                TabStop = false,
+                Location = new Point(550, 225),
+                Size = new Size(300, 300)
+            };
             // Student Image
             picStudentImage = new PictureBox
             {
-                Location = new Point(50, 140),
+                Location = new Point(5, 10),
                 Size = new Size(150, 150),
                 SizeMode = PictureBoxSizeMode.StretchImage,
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.FixedSingle,
+                Dock = DockStyle.Fill
             };
             LoadDefaultStudentImage();
 
+            grpStudentId = new GroupBox
+            {
+                Dock = DockStyle.None,
+                Height = 80,
+                BackColor = Color.DarkBlue,
+                ForeColor = Color.White,
+                Font = new Font("Arial", 12, FontStyle.Bold),
+                TabStop = false,
+                Location = new Point(50, 600),
+                Width = 200,
+                Size = new Size(325, 80),
+                Text = "Student ID"
+            };
             // Student ID
             lblStudentId = new Label
             {
-                Location = new Point(220, 140),
-                Size = new Size(400, 30),
+                Location = new Point(10, 30),
+                Size = new Size(300, 20),
                 Font = new Font("Arial", 14, FontStyle.Bold),
                 ForeColor = Color.White,
                 Text = "" // Start empty
             };
 
+            grpFullName = new GroupBox
+            {
+                Dock = DockStyle.None,
+                Height = 80,
+                BackColor = Color.DarkBlue,
+                ForeColor = Color.White,
+                Font = new Font("Arial", 12, FontStyle.Bold),
+                TabStop = false,
+                Location = new Point(400, 600),
+                Width = 300,
+                Size = new Size(575, 80),
+                Text = "Student Name"
+            };
             // Student Name
             lblStudentName = new Label
             {
-                Location = new Point(220, 180),
-                Size = new Size(400, 40),
+                Location = new Point(10, 30),
+                Size = new Size(550, 40),
                 Font = new Font("Arial", 18, FontStyle.Bold),
                 ForeColor = Color.Cyan,
                 Text = "" // Start empty
             };
 
+            grpPhone = new GroupBox
+            {
+                Dock = DockStyle.None,
+                Height = 80,
+                BackColor = Color.DarkBlue,
+                ForeColor = Color.White,
+                Font = new Font("Arial", 12, FontStyle.Bold),
+                TabStop = false,
+                Location = new Point(50, 700),
+                Width = 200,
+                Size = new Size(325, 80),
+                Text = "Contact Information"
+            };
             // Cell Phone
             lblCellPhone = new Label
             {
-                Location = new Point(220, 230),
+                Location = new Point(10, 30),
+                Size = new Size(300, 30),
+                Font = new Font("Arial", 12),
+                ForeColor = Color.White,
+                Text = "" // Start empty
+            };
+
+            grpEmail = new GroupBox
+            {
+                Dock = DockStyle.None,
+                Height = 80,
+                BackColor = Color.DarkBlue,
+                ForeColor = Color.White,
+                Font = new Font("Arial", 12, FontStyle.Bold),
+                TabStop = false,
+                Location = new Point(400, 700),
+                Width = 300,
+                Size = new Size(575, 80),
+                Text = "Email Address"
+            };
+            // Email
+            lblEmail = new Label
+            {
+                Location = new Point(10, 30),
                 Size = new Size(400, 25),
                 Font = new Font("Arial", 12),
                 ForeColor = Color.White,
                 Text = "" // Start empty
             };
 
-            // Email
-            lblEmail = new Label
+            grpTimeInOut = new GroupBox
             {
-                Location = new Point(220, 260),
-                Size = new Size(400, 25),
-                Font = new Font("Arial", 12),
+                Dock = DockStyle.None,
+                BackColor = Color.DarkBlue,
                 ForeColor = Color.White,
-                Text = "" // Start empty
+                Font = new Font("Arial", 12, FontStyle.Bold),
+                TabStop = false,
+                Location = new Point(400, 785),
+                Size = new Size(575, 100),
+                Text = "Attendance Status"
             };
 
             // Time In/Out Status
             lblTimeInOut = new Label
             {
-                Location = new Point(50, 310),
-                Size = new Size(600, 80),
-                Font = new Font("Arial", 16, FontStyle.Bold),
+                Location = new Point(150, 20),
+                Size = new Size(300, 70),
+                Font = new Font("Arial", 15, FontStyle.Bold),
                 ForeColor = Color.Lime,
                 Text = "" // Start empty
             };
 
+            grpRfid = new GroupBox
+            {
+                Dock = DockStyle.None,
+                BackColor = Color.DarkBlue,
+                ForeColor = Color.White,
+                Font = new Font("Arial", 12, FontStyle.Bold),
+                TabStop = false,
+                Location = new Point(600, 525),
+                Size = new Size(200, 50),
+                Text = "RFID Scan Status"
+            };
+
             txtRFIDTag = new TextBox
             {
-                Location = new Point(0, 0),
-                Size = new Size(100, 100),
+                Location = new Point(25, 20),
+                Size = new Size(100, 110),
                 Font = new Font("Arial", 12, FontStyle.Regular),
                 Visible = true, // Hidden by default
                 Text = string.Empty,
@@ -200,10 +359,24 @@ namespace StudentAttendanceSystem.Service.Forms
             };
             txtRFIDTag.KeyPress += TxtRFIDTag_KeyPress;
 
+            grpRfid.Controls.Add(txtRFIDTag);
+            grpStudentId.Controls.Add(lblStudentId);
+            grpFullName.Controls.Add(lblStudentName);
+            grpGradeSection.Controls.Add(lblGradeSection);
+            grpPhone.Controls.Add(lblCellPhone);
+            grpEmail.Controls.Add(lblEmail);
+            grpPerson.Controls.Add(picStudentImage);
+            grpDateTime.Controls.Add(lblCurrentTime);
+            grpTimeInOut.Controls.Add(lblTimeInOut);
+            grpInstruct.Controls.Add(lblRFIDInstruction);
+            grpContainer.Controls.AddRange([ grpDateTime,
+                grpGradeSection, grpStudentId, grpFullName
+                , grpPhone, grpEmail, grpPerson,grpRfid
+                , grpInstruct, lblDebugInfo
+                , grpTimeInOut]);
             // Add controls to form
             this.Controls.AddRange(new Control[] {
-                txtRFIDTag, lblCurrentTime, lblRFIDInstruction, lblDebugInfo, picStudentImage,
-                lblStudentId, lblStudentName, lblCellPhone, lblEmail, lblTimeInOut
+                grpContainer
             });
 
             // Clear student display initially
@@ -497,7 +670,9 @@ namespace StudentAttendanceSystem.Service.Forms
                     return;
                 }
 
-                lblStudentId.Text = $"Student ID: {student.StudentNumber ?? "N/A"}";
+                lblStudentId.Text = $"{student.StudentNumber ?? "N/A"}";
+                var gradeSection = $"{student.GradeLevel ?? "Grade 10"}/{student.Section ?? "Einstein"}";
+                lblGradeSection.Text = string.IsNullOrWhiteSpace(gradeSection) ? "N/A" : gradeSection;
 
                 var fullName = $"{student.FirstName ?? ""} {student.MiddleName ?? ""} {student.LastName ?? ""}".Trim();
                 lblStudentName.Text = string.IsNullOrWhiteSpace(fullName) ? "No Name Available" : fullName;
@@ -601,6 +776,7 @@ namespace StudentAttendanceSystem.Service.Forms
             lblCellPhone.Text = "";
             lblEmail.Text = "";
             lblTimeInOut.Text = "";
+            lblGradeSection.Text = "N/A";
             txtRFIDTag.SelectAll();
             LoadDefaultStudentImage();
         }
