@@ -12,7 +12,7 @@ namespace StudentAttendanceSystem.Service.Forms
     public partial class AttendanceDisplayForm : Form
     {
         private readonly StudentRepository _studentRepository;
-        private readonly AttendanceRepository _attendanceRepository;
+        private readonly IAttendanceRepository _attendanceRepository;
         private readonly SMSRepository _smsRepository;
         private readonly RFIDService _rfidService;
         private NotificationService _notificationService;
@@ -24,10 +24,14 @@ namespace StudentAttendanceSystem.Service.Forms
         private Label lblEmail;
         private Label lblTimeInOut;
         private Label lblRFIDInstruction;
+        private Label lblDebugInfo; // Add debug information label
         private System.Windows.Forms.Timer clockTimer;
         private Student? _currentStudent;
         private Image? _defaultStudentImage;
-
+        private bool _isInitialized = false;
+        private TextBox txtRFIDTag;
+        private AttendanceValidationResult _lastValidationResult = new AttendanceValidationResult { IsValid = true, ValidationMessage = "" };
+        private StudentAttendanceStatus? _lastAttendanceStatus = null;
         public AttendanceDisplayForm(DatabaseConnection dbConnection)
         {
             _studentRepository = new StudentRepository(dbConnection);
@@ -36,16 +40,49 @@ namespace StudentAttendanceSystem.Service.Forms
 
             // Initialize RFID service with delegates
             _rfidService = new RFIDService(
-                async (rfidCode) => await _studentRepository.GetStudentByRFIDAsync(rfidCode),
-                async (studentId, type) => await _attendanceRepository.RecordAttendanceAsync(studentId, type)
+                async (rfidCode) =>
+                {
+                    try
+                    {
+                        var student = await _studentRepository.GetStudentByRFIDAsync(rfidCode);
+                        UpdateDebugInfo($"Student lookup: {(student != null ? $"Found {student.FirstName} {student.LastName}" : "Not found")} for RFID: {rfidCode}");
+                        return student;
+                    }
+                    catch (Exception ex)
+                    {
+                        UpdateDebugInfo($"Error looking up student: {ex.Message}");
+                        return null;
+                    }
+                },
+                async (studentId, type) =>
+                {
+                    try
+                    {
+                        _lastAttendanceStatus = await _attendanceRepository.GetStudentAttendanceStatusAsync(studentId);
+                        _lastValidationResult = await _attendanceRepository.ValidateAttendanceActionAsync(studentId, (AttendanceType)Enum.Parse(typeof(AttendanceType), _lastAttendanceStatus.CurrentStatus));
+                        if (!_lastValidationResult.IsValid)
+                        {
+                            UpdateDebugInfo($"Attendance validation failed: {_lastValidationResult.ValidationMessage}");
+                            return false;
+                        }
+                        var result = await _attendanceRepository.RecordAttendanceAsync(studentId, (AttendanceType)Enum.Parse(typeof(AttendanceType), _lastAttendanceStatus.CurrentStatus));
+                        UpdateDebugInfo($"Attendance recorded: Student {studentId}, Type: {type}");
+                        return result;
+                    }
+                    catch (Exception ex)
+                    {
+                        UpdateDebugInfo($"Error recording attendance: {ex.Message}");
+                        throw;
+                    }
+                },
+                _attendanceRepository
             );
 
-            // FIXED: Don't call async methods in constructor
             InitializeComponent();
             SetupTimers();
 
-            // Initialize services after form is loaded
-            this.Load += async (s, e) => await InitializeServicesAsync();
+            // Initialize services after form is shown
+            this.Shown += async (s, e) => await InitializeServicesAsync();
         }
 
         private void InitializeComponent()
@@ -53,7 +90,7 @@ namespace StudentAttendanceSystem.Service.Forms
             this.SuspendLayout();
 
             // Form properties
-            this.Text = "Student Attendance Display";
+            this.Text = "Student Attendance Tracking";
             this.WindowState = FormWindowState.Maximized;
             this.FormBorderStyle = FormBorderStyle.None;
             this.BackColor = Color.Navy;
@@ -73,18 +110,29 @@ namespace StudentAttendanceSystem.Service.Forms
             // RFID Instruction
             lblRFIDInstruction = new Label
             {
-                Text = "Please tap your RFID card to scan attendance",
+                Text = "Initializing RFID Scanner...",
                 Font = new Font("Arial", 16, FontStyle.Italic),
-                ForeColor = Color.LightGray,
+                ForeColor = Color.Orange,
                 Location = new Point(50, 80),
                 Size = new Size(600, 30),
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+
+            // Debug Info Label
+            lblDebugInfo = new Label
+            {
+                Text = "Debug: System starting...",
+                Font = new Font("Arial", 10),
+                ForeColor = Color.Gray,
+                Location = new Point(50, 110),
+                Size = new Size(800, 20),
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
             // Student Image
             picStudentImage = new PictureBox
             {
-                Location = new Point(50, 130),
+                Location = new Point(50, 140),
                 Size = new Size(150, 150),
                 SizeMode = PictureBoxSizeMode.StretchImage,
                 BorderStyle = BorderStyle.FixedSingle
@@ -94,52 +142,68 @@ namespace StudentAttendanceSystem.Service.Forms
             // Student ID
             lblStudentId = new Label
             {
-                Location = new Point(220, 130),
+                Location = new Point(220, 140),
                 Size = new Size(400, 30),
                 Font = new Font("Arial", 14, FontStyle.Bold),
-                ForeColor = Color.White
+                ForeColor = Color.White,
+                Text = "" // Start empty
             };
 
             // Student Name
             lblStudentName = new Label
             {
-                Location = new Point(220, 170),
+                Location = new Point(220, 180),
                 Size = new Size(400, 40),
                 Font = new Font("Arial", 18, FontStyle.Bold),
-                ForeColor = Color.Cyan
+                ForeColor = Color.Cyan,
+                Text = "" // Start empty
             };
 
             // Cell Phone
             lblCellPhone = new Label
             {
-                Location = new Point(220, 220),
+                Location = new Point(220, 230),
                 Size = new Size(400, 25),
                 Font = new Font("Arial", 12),
-                ForeColor = Color.White
+                ForeColor = Color.White,
+                Text = "" // Start empty
             };
 
             // Email
             lblEmail = new Label
             {
-                Location = new Point(220, 250),
+                Location = new Point(220, 260),
                 Size = new Size(400, 25),
                 Font = new Font("Arial", 12),
-                ForeColor = Color.White
+                ForeColor = Color.White,
+                Text = "" // Start empty
             };
 
             // Time In/Out Status
             lblTimeInOut = new Label
             {
-                Location = new Point(50, 300),
-                Size = new Size(600, 60),
+                Location = new Point(50, 310),
+                Size = new Size(600, 80),
                 Font = new Font("Arial", 16, FontStyle.Bold),
-                ForeColor = Color.Lime
+                ForeColor = Color.Lime,
+                Text = "" // Start empty
             };
+
+            txtRFIDTag = new TextBox
+            {
+                Location = new Point(0, 0),
+                Size = new Size(100, 100),
+                Font = new Font("Arial", 12, FontStyle.Regular),
+                Visible = true, // Hidden by default
+                Text = string.Empty,
+                ReadOnly = false
+            };
+            txtRFIDTag.KeyPress += TxtRFIDTag_KeyPress;
 
             // Add controls to form
             this.Controls.AddRange(new Control[] {
-                lblCurrentTime, lblRFIDInstruction, picStudentImage, lblStudentId,
-                lblStudentName, lblCellPhone, lblEmail, lblTimeInOut
+                txtRFIDTag, lblCurrentTime, lblRFIDInstruction, lblDebugInfo, picStudentImage,
+                lblStudentId, lblStudentName, lblCellPhone, lblEmail, lblTimeInOut
             });
 
             // Clear student display initially
@@ -148,48 +212,73 @@ namespace StudentAttendanceSystem.Service.Forms
             this.ResumeLayout(false);
         }
 
+        private async void TxtRFIDTag_KeyPress(object? sender, KeyPressEventArgs e)
+        {
+            if (e.KeyChar == (char)Keys.Enter && !string.IsNullOrWhiteSpace(txtRFIDTag.Text))
+            {
+                ClearStudentDisplay();
+                // Simulate a card read when Enter is pressed
+                if (txtRFIDTag.Text.Trim().Length > 0)
+                {
+                    var studentInfo = _studentRepository.GetStudentByRFIDAsync(txtRFIDTag.Text.Trim());
+                    var args = new StudentAttendanceEventArgs
+                    {
+                        Student = await studentInfo,
+                        ScanTime = DateTime.Parse(lblCurrentTime.Text),
+                        Success = true
+                    };
+                    RfidService_StudentScanned(null, args);
+                    e.Handled = true; // Prevent the beep sound on Enter key
+                }
+            }
+        }
+
         private async Task InitializeServicesAsync()
         {
             try
             {
+                UpdateDebugInfo("Initializing services...");
+
                 var smsConfig = await _smsRepository.GetActiveSMSConfigurationAsync();
+                UpdateDebugInfo($"SMS Config loaded: {(smsConfig != null ? "Success" : "None found")}");
 
-                // The constructor expects: Func<int?, string, string, SMSStatus, string?, Task<int>>
-                // This matches your LogSMSAsync signature, but it seems to only take 5 parameters, not 6
-                // Based on the tooltip, it looks like it expects: (studentId, phoneNumber, message, status, errorMessage)
-
+                // Create SMS logger delegate
                 Func<int?, string, string, SMSStatus, string?, Task<int>> smsLogger =
                     async (studentId, phoneNumber, message, status, errorMessage) =>
                     {
                         try
                         {
-                            // Call your repository method with the 5 parameters, defaulting providerResponse to null
                             return await _smsRepository.LogSMSAsync(studentId, phoneNumber, message, status, errorMessage, null);
                         }
                         catch (Exception ex)
                         {
-                            System.Diagnostics.Debug.WriteLine($"Error logging SMS: {ex.Message}");
-                            return -1; // Return error indicator
+                            UpdateDebugInfo($"SMS Log Error: {ex.Message}");
+                            return -1;
                         }
                     };
 
                 var smsService = new SemaphoreSMSService(
                     smsConfig ?? new SMSConfiguration(),
-                    smsLogger  // This should now match the expected signature exactly
+                    smsLogger
                 );
 
                 _notificationService = new NotificationService(smsService, async () => await _smsRepository.GetActiveSMSConfigurationAsync());
                 _notificationService.NotificationSent += NotificationService_NotificationSent;
                 _notificationService.NotificationError += NotificationService_NotificationError;
 
+                UpdateDebugInfo("Notification service initialized");
+
                 await SetupRFIDServiceAsync();
 
-                System.Diagnostics.Debug.WriteLine("Services initialized successfully");
+                _isInitialized = true;
+                UpdateDebugInfo("All services initialized successfully");
             }
             catch (Exception ex)
             {
-                lblRFIDInstruction.Text = $"Initialization Error: {ex.Message}";
+                var errorMsg = $"Initialization Error: {ex.Message}";
+                lblRFIDInstruction.Text = errorMsg;
                 lblRFIDInstruction.ForeColor = Color.Red;
+                UpdateDebugInfo($"INIT ERROR: {ex}");
                 System.Diagnostics.Debug.WriteLine($"Service Initialization Error: {ex}");
             }
         }
@@ -198,29 +287,59 @@ namespace StudentAttendanceSystem.Service.Forms
         {
             try
             {
+                UpdateDebugInfo("Setting up RFID service...");
+
+                // Subscribe to events BEFORE initializing
                 _rfidService.StudentScanned += RfidService_StudentScanned;
                 _rfidService.RFIDError += RfidService_RFIDError;
                 _rfidService.StatusChanged += RfidService_StatusChanged;
 
+                UpdateDebugInfo("RFID events subscribed, initializing...");
+
                 // Initialize and start RFID reading
                 var initialized = await _rfidService.InitializeAsync();
+                UpdateDebugInfo($"RFID Initialize result: {initialized}");
                 if (initialized)
                 {
                     await _rfidService.StartReadingAsync();
                     lblRFIDInstruction.Text = "RFID Reader Ready - Please tap your card";
                     lblRFIDInstruction.ForeColor = Color.LightGreen;
+                    UpdateDebugInfo("RFID service started successfully");
                 }
                 else
                 {
                     lblRFIDInstruction.Text = "RFID Reader Not Available - Contact Administrator";
                     lblRFIDInstruction.ForeColor = Color.Red;
+                    UpdateDebugInfo("RFID service failed to initialize");
                 }
             }
             catch (Exception ex)
             {
-                lblRFIDInstruction.Text = $"RFID Error: {ex.Message}";
+                var errorMsg = $"RFID Error: {ex.Message}";
+                lblRFIDInstruction.Text = errorMsg;
                 lblRFIDInstruction.ForeColor = Color.Red;
+                UpdateDebugInfo($"RFID SETUP ERROR: {ex}");
                 System.Diagnostics.Debug.WriteLine($"RFID Service Error: {ex}");
+            }
+        }
+
+        private void UpdateDebugInfo(string message)
+        {
+            if (lblDebugInfo != null)
+            {
+                if (InvokeRequired)
+                {
+                    Invoke(() =>
+                    {
+                        lblDebugInfo.Text = $"Debug: {DateTime.Now:HH:mm:ss} - {message}";
+                        System.Diagnostics.Debug.WriteLine($"[AttendanceDisplay] {message}");
+                    });
+                }
+                else
+                {
+                    lblDebugInfo.Text = $"Debug: {DateTime.Now:HH:mm:ss} - {message}";
+                    System.Diagnostics.Debug.WriteLine($"[AttendanceDisplay] {message}");
+                }
             }
         }
 
@@ -235,7 +354,10 @@ namespace StudentAttendanceSystem.Service.Forms
 
         private void ClockTimer_Tick(object sender, EventArgs e)
         {
-            lblCurrentTime.Text = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            if (lblCurrentTime != null)
+            {
+                lblCurrentTime.Text = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            }
         }
 
         private void RfidService_StudentScanned(object? sender, StudentAttendanceEventArgs e)
@@ -246,41 +368,58 @@ namespace StudentAttendanceSystem.Service.Forms
                 return;
             }
 
-            if (e.Success)
+            UpdateDebugInfo($"Student scan event - Success: {e.Success}");
+
+            if (e.Success && e.Student != null)
             {
                 _currentStudent = e.Student;
+                UpdateDebugInfo($"Displaying student: {e.Student.FirstName} {e.Student.LastName}");
                 DisplayStudentInfo(e.Student);
-                
-                var typeText = e.AttendanceType == AttendanceType.TimeIn ? "TIME IN" : "TIME OUT";
-                lblTimeInOut.Text = $"✓ {typeText} RECORDED\nTime: {e.ScanTime:HH:mm:ss}\nDate: {e.ScanTime:yyyy-MM-dd}";
-                lblTimeInOut.ForeColor = Color.Lime;
 
                 // Send SMS notification
-                _ = Task.Run(async () => await _notificationService.SendAttendanceNotificationAsync(e.Student, e.AttendanceType, e.ScanTime));
-
-                // Clear display after 5 seconds
                 _ = Task.Run(async () =>
                 {
-                    await Task.Delay(5000);
-                    if (InvokeRequired)
-                        Invoke(ClearStudentDisplay);
-                    else
-                        ClearStudentDisplay();
+                    try
+                    {                       
+                        _lastAttendanceStatus = await _attendanceRepository.GetStudentAttendanceStatusAsync(e.Student.StudentId);
+                        _lastValidationResult = await _attendanceRepository.ValidateAttendanceActionAsync(e.Student.StudentId, (AttendanceType)Enum.Parse(typeof(AttendanceType), _lastAttendanceStatus.CurrentStatus));
+                        if (_lastValidationResult.IsValid)
+                        {
+                            await _notificationService.SendAttendanceNotificationAsync(e.Student, (AttendanceType)Enum.Parse(typeof(AttendanceType), _lastAttendanceStatus.CurrentStatus), e.ScanTime);
+                            var result = await _attendanceRepository.RecordAttendanceAsync(e.Student.StudentId, (AttendanceType)Enum.Parse(typeof(AttendanceType), _lastAttendanceStatus.CurrentStatus));
+                            UpdateDebugInfo("SMS notification sent");
+                        }
+                        else
+                        {
+                            UpdateDebugInfo($"Attendance validation failed: {_lastValidationResult.ValidationMessage}");
+                            UpdateDebugInfo($"Attendance recorded: Student {e.Student.StudentId}, Type: {e.AttendanceType}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        UpdateDebugInfo($"SMS notification failed: {ex.Message}");
+                    }
                 });
+
+                var typeText = _lastAttendanceStatus == null ? "TIME_IN" : string.Join("_", new string[] { "TIME", _lastAttendanceStatus.CurrentStatus.ToUpper() });
+                lblTimeInOut.Text = $"✓ {typeText} RECORDED\nTime: {e.ScanTime:HH:mm:ss}\nDate: {e.ScanTime:yyyy-MM-dd}";
+                lblTimeInOut.ForeColor = Color.Lime;
             }
             else
             {
-                lblTimeInOut.Text = $"❌ ATTENDANCE FAILED\n{e.ErrorMessage}";
+                var errorMsg = e.ErrorMessage ?? "Unknown error";
+                lblTimeInOut.Text = $"✗ ATTENDANCE FAILED\n{errorMsg}";
                 lblTimeInOut.ForeColor = Color.Red;
-                
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(3000);
-                    if (InvokeRequired)
-                        Invoke(ClearStudentDisplay);
-                    else
-                        ClearStudentDisplay();
-                });
+                UpdateDebugInfo($"Attendance failed: {errorMsg}");
+
+                //_ = Task.Run(async () =>
+                //{
+                //    await Task.Delay(3000);
+                //    if (InvokeRequired)
+                //        Invoke(ClearStudentDisplay);
+                //    else
+                //        ClearStudentDisplay();
+                //});
             }
         }
 
@@ -292,9 +431,11 @@ namespace StudentAttendanceSystem.Service.Forms
                 return;
             }
 
-            lblTimeInOut.Text = $"❌ RFID ERROR\n{e.ErrorMessage}";
+            var errorMsg = e.ErrorMessage ?? "Unknown RFID error";
+            lblTimeInOut.Text = $"✗ RFID ERROR\n{errorMsg}";
             lblTimeInOut.ForeColor = Color.Red;
-            
+            UpdateDebugInfo($"RFID Error: {errorMsg}");
+
             _ = Task.Run(async () =>
             {
                 await Task.Delay(3000);
@@ -313,6 +454,9 @@ namespace StudentAttendanceSystem.Service.Forms
                 return;
             }
 
+            var statusMsg = e.Message ?? "";
+            UpdateDebugInfo($"RFID Status: {e.Status} - {statusMsg}");
+
             switch (e.Status)
             {
                 case Core.Interfaces.RFIDReaderStatus.Reading:
@@ -324,7 +468,7 @@ namespace StudentAttendanceSystem.Service.Forms
                     lblRFIDInstruction.ForeColor = Color.Yellow;
                     break;
                 case Core.Interfaces.RFIDReaderStatus.Error:
-                    lblRFIDInstruction.Text = $"RFID Reader Error: {e.Message}";
+                    lblRFIDInstruction.Text = $"RFID Reader Error: {statusMsg}";
                     lblRFIDInstruction.ForeColor = Color.Red;
                     break;
                 case Core.Interfaces.RFIDReaderStatus.Disconnected:
@@ -334,23 +478,49 @@ namespace StudentAttendanceSystem.Service.Forms
             }
         }
 
-
         private void DisplayStudentInfo(Student student)
         {
-            lblStudentId.Text = $"Student ID: {student.StudentNumber}";
-            lblStudentName.Text = $"{student.FirstName} {student.MiddleName} {student.LastName}";
-            lblCellPhone.Text = $"Phone: {student.CellPhone}";
-            lblEmail.Text = $"Email: {student.Email}";
+            try
+            {
+                if (student == null)
+                {
+                    UpdateDebugInfo("DisplayStudentInfo called with null student");
+                    return;
+                }
 
-            // Load student image
-            LoadStudentImage(student.ImagePath);
+                UpdateDebugInfo($"Displaying info for: {student.FirstName} {student.LastName}");
+
+                // Ensure we're on the UI thread
+                if (InvokeRequired)
+                {
+                    Invoke(() => DisplayStudentInfo(student));
+                    return;
+                }
+
+                lblStudentId.Text = $"Student ID: {student.StudentNumber ?? "N/A"}";
+
+                var fullName = $"{student.FirstName ?? ""} {student.MiddleName ?? ""} {student.LastName ?? ""}".Trim();
+                lblStudentName.Text = string.IsNullOrWhiteSpace(fullName) ? "No Name Available" : fullName;
+
+                lblCellPhone.Text = $"Phone: {student.CellPhone ?? "N/A"}";
+                lblEmail.Text = $"Email: {student.Email ?? "N/A"}";
+
+                // Load student image
+                LoadStudentImage(student.ImagePath);
+
+                UpdateDebugInfo("Student info displayed successfully");
+            }
+            catch (Exception ex)
+            {
+                UpdateDebugInfo($"Error displaying student info: {ex.Message}");
+            }
         }
 
         private void LoadStudentImage(string? imagePath)
         {
             try
             {
-                // FIXED: Properly dispose previous image to prevent memory leaks
+                // Dispose previous image to prevent memory leaks
                 if (picStudentImage.Image != null && picStudentImage.Image != _defaultStudentImage)
                 {
                     var oldImage = picStudentImage.Image;
@@ -360,16 +530,18 @@ namespace StudentAttendanceSystem.Service.Forms
 
                 if (!string.IsNullOrEmpty(imagePath) && File.Exists(imagePath))
                 {
+                    UpdateDebugInfo($"Loading image from: {imagePath}");
                     picStudentImage.Image = Image.FromFile(imagePath);
                 }
                 else
                 {
+                    UpdateDebugInfo($"Using default image (path: {imagePath ?? "null"})");
                     picStudentImage.Image = GetDefaultStudentImage();
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error loading student image: {ex.Message}");
+                UpdateDebugInfo($"Error loading image: {ex.Message}");
                 picStudentImage.Image = GetDefaultStudentImage();
             }
         }
@@ -390,7 +562,6 @@ namespace StudentAttendanceSystem.Service.Forms
                         g.FillEllipse(Brushes.LightGray, 50, 30, 50, 50);
                         g.FillRectangle(Brushes.LightGray, 40, 90, 70, 40);
 
-                        // FIXED: Properly dispose font
                         using (var font = new Font("Arial", 10))
                         {
                             g.DrawString("No Photo", font, Brushes.White, 45, 135);
@@ -400,8 +571,7 @@ namespace StudentAttendanceSystem.Service.Forms
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error creating default image: {ex.Message}");
-                    // Return a simple colored rectangle if image creation fails
+                    UpdateDebugInfo($"Error creating default image: {ex.Message}");
                     var fallback = new Bitmap(150, 150);
                     using (var g = Graphics.FromImage(fallback))
                     {
@@ -420,22 +590,29 @@ namespace StudentAttendanceSystem.Service.Forms
 
         private void ClearStudentDisplay()
         {
+            if (InvokeRequired)
+            {
+                Invoke(ClearStudentDisplay);
+                return;
+            }
+
             lblStudentId.Text = "";
             lblStudentName.Text = "";
             lblCellPhone.Text = "";
             lblEmail.Text = "";
             lblTimeInOut.Text = "";
+            txtRFIDTag.SelectAll();
             LoadDefaultStudentImage();
         }
 
         private void NotificationService_NotificationSent(object? sender, NotificationEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine($"✓ SMS sent to {e.PhoneNumber} for student {e.Student.FirstName} {e.Student.LastName}");
+            UpdateDebugInfo($"SMS sent to {e.PhoneNumber} for {e.Student.FirstName} {e.Student.LastName}");
         }
 
         private void NotificationService_NotificationError(object? sender, NotificationErrorEventArgs e)
         {
-            System.Diagnostics.Debug.WriteLine($"✗ SMS Error: {e.ErrorMessage}");
+            UpdateDebugInfo($"SMS Error: {e.ErrorMessage}");
         }
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
@@ -444,13 +621,13 @@ namespace StudentAttendanceSystem.Service.Forms
         {
             try
             {
-                // Cancel any ongoing operations
+                UpdateDebugInfo("Form closing...");
+
                 _cancellationTokenSource?.Cancel();
 
                 clockTimer?.Stop();
                 clockTimer?.Dispose();
 
-                // Proper async disposal handling
                 if (_rfidService != null)
                 {
                     Task.Run(async () =>
@@ -474,15 +651,14 @@ namespace StudentAttendanceSystem.Service.Forms
 
             base.OnFormClosed(e);
         }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                // Dispose of cached default image
                 _cancellationTokenSource?.Dispose();
                 _defaultStudentImage?.Dispose();
 
-                // Dispose of current student image if it's not the default
                 if (picStudentImage?.Image != null && picStudentImage.Image != _defaultStudentImage)
                 {
                     picStudentImage.Image.Dispose();
@@ -499,6 +675,15 @@ namespace StudentAttendanceSystem.Service.Forms
                 this.Close();
                 return true;
             }
+
+            //// Add test key for debugging
+            //if (keyData == Keys.F12)
+            //{
+            //    // Simulate a student scan for testing
+            //    _ = Task.Run(async () => await TestStudentScan());
+            //    return true;
+            //}
+
             return base.ProcessCmdKey(ref msg, keyData);
         }
     }
