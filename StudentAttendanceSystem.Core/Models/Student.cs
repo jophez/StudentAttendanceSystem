@@ -1,6 +1,6 @@
 namespace StudentAttendanceSystem.Core.Models
 {
-    public class Student
+    public class  Student
     {
         public int StudentId { get; set; }
         public string StudentNumber { get; set; } = string.Empty;
@@ -20,6 +20,8 @@ namespace StudentAttendanceSystem.Core.Models
         public bool IsActive { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? ModifiedDate { get; set; }
+        public string GradeLevel { get; set; } = string.Empty;
+        public string Section { get; set; } = string.Empty;
         public List<AttendanceRecord> AttendanceRecords { get; set; } = new List<AttendanceRecord>();
     }
 }

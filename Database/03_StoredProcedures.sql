@@ -464,7 +464,7 @@ GO
 -------------------------------------------
 -- Attendance Management Stored Procedures
 -------------------------------------------
-CREATE OR ALTER PROCEDURE sp_RecordAttendance
+CREATE OR ALTER   PROCEDURE [dbo].[sp_RecordAttendance]
     @StudentId INT,
     @Type INT, -- 1=TimeIn, 2=TimeOut
     @Notes NVARCHAR(500) = NULL
@@ -475,15 +475,16 @@ BEGIN
     DECLARE @TimeValue DATETIME2 = GETDATE();
     
     BEGIN TRY
-        IF @Type = 1 -- Time In
+        IF @Type = 0 -- Time In
         BEGIN
             INSERT INTO AttendanceRecords (StudentId, TimeIn, Type, Notes)
             VALUES (@StudentId, @TimeValue, @Type, @Notes);
         END
-        ELSE IF @Type = 2 -- Time Out
+        ELSE IF @Type = 1 -- Time Out
         BEGIN
-            INSERT INTO AttendanceRecords (StudentId, TimeOut, Type, Notes)
-            VALUES (@StudentId, @TimeValue, @Type, @Notes);
+            UPDATE AttendanceRecords 
+            SET [TimeOut] = @TimeValue, [Type] = @Type, Notes = @Notes
+            WHERE StudentId = @StudentId AND [Type] = 0 --Time In
         END
     END TRY
     BEGIN CATCH
@@ -618,5 +619,78 @@ BEGIN
     BEGIN CATCH
         THROW;
     END CATCH
+END
+GO
+---------08-31-2025
+CREATE OR ALTER PROCEDURE [dbo].[sp_GetStudentAttendanceStatus]
+    @StudentId INT,
+    @CurrentStatus NVARCHAR(10) OUTPUT,
+    @LastTimeStamp DATETIME OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @LastAttendanceType INT;
+    
+    -- Get the most recent attendance record for today
+    SELECT TOP 1 
+        @LastAttendanceType = [Type],
+        @LastTimeStamp = RecordedDate
+    FROM [dbo].[AttendanceRecords]
+    WHERE StudentId = @StudentId
+        AND CAST(RecordedDate AS DATE) = CAST(GETDATE() AS DATE)
+    ORDER BY RecordedDate DESC;
+    
+    -- Determine current status based on AttendanceType enum
+    -- Assuming: TimeIn = 0, TimeOut = 1 (adjust based on your enum values)
+    IF @LastAttendanceType IS NULL
+        SET @CurrentStatus = 'IN'; -- Never clocked in today
+    IF @LastAttendanceType = 0 -- TimeIn
+        SET @CurrentStatus = 'OUT';  -- Last action was clock in
+    ELSE IF @LastAttendanceType = 1 -- TimeOut
+        SET @CurrentStatus = 'IN'; -- Last action was clock out
+    ELSE
+        SET @CurrentStatus = 'OUT'; -- Default to out for safety
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[sp_ValidateAttendanceAction]
+    @StudentId INT,
+    @ProposedAttendanceType NVARCHAR(10),
+    @IsValid BIT OUTPUT,
+    @ValidationMessage NVARCHAR(255) OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @LastTimeStamp DATETIME;
+    DECLARE @MinutesSinceLastScan INT;
+    
+    -- Get last attendance record timestamp
+    SELECT TOP 1 
+        @LastTimeStamp = RecordedDate
+    FROM [dbo].[AttendanceRecords]
+    WHERE StudentId = @StudentId
+        AND CAST(RecordedDate AS DATE) = CAST(GETDATE() AS DATE)
+    ORDER BY RecordedDate DESC;
+    
+    -- Calculate minutes since last scan
+    IF @LastTimeStamp IS NOT NULL
+        SET @MinutesSinceLastScan = DATEDIFF(MINUTE, @LastTimeStamp, GETDATE());
+    ELSE
+        SET @MinutesSinceLastScan = 999; -- No previous record
+    
+    -- Validation Rule: Prevent rapid successive scans (within 5 minutes)
+    IF @MinutesSinceLastScan < 5
+    BEGIN
+        SET @IsValid = 0;
+        SET @ValidationMessage = 'Please wait at least 5 minutes between consecutive scans.';
+        RETURN;
+    END
+    
+    -- Additional business rules can be added here
+    
+    SET @IsValid = 1;
+    SET @ValidationMessage = 'Attendance action is valid.';
 END
 GO
