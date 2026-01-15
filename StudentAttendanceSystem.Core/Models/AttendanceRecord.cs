@@ -15,7 +15,7 @@ namespace StudentAttendanceSystem.Core.Models
 
     public enum AttendanceType
     {
-        TimeIn = 1,
-        TimeOut = 2
+        IN = 0,
+        OUT = 1
     }
 }
