@@ -45,6 +45,8 @@ namespace StudentAttendanceSystem.Data.Repositories
                     RFIDTag = reader.IsDBNull("RFIDCode") ? null : reader.GetString("RFIDCode"),
                     IsActive = reader.GetBoolean("IsActive"),
                     CreatedDate = reader.GetDateTime("CreatedDate")
+                   // Section = reader.IsDBNull(reader.GetString("Section")) ? "Einstein" : reader.GetString("Section"),
+                   // GradeLevel = reader.IsDBNull(reader.GetString("GradeLevel")) ? "Grade 10" : reader.GetString("GradeLevel")
                 };
 
                 if (!reader.IsDBNull("GuardianId"))
@@ -98,6 +100,8 @@ namespace StudentAttendanceSystem.Data.Repositories
                     RFIDTag = reader.IsDBNull("RFIDCode") ? null : reader.GetString("RFIDCode"),
                     IsActive = reader.GetBoolean("IsActive"),
                     CreatedDate = reader.GetDateTime("CreatedDate")
+                    //Section = reader.GetString("Section"),
+                    //GradeLevel = reader.GetString("GradeLevel")
                 };
 
                 if (!reader.IsDBNull("GuardianId"))
@@ -150,7 +154,9 @@ namespace StudentAttendanceSystem.Data.Repositories
                     GuardianId = reader.IsDBNull("GuardianId") ? null : reader.GetInt32("GuardianId"),
                     RFIDTag = reader.IsDBNull("RFIDCode") ? null : reader.GetString("RFIDCode"),
                     IsActive = reader.GetBoolean("IsActive"),
-                    CreatedDate = reader.GetDateTime("CreatedDate")
+                    CreatedDate = reader.GetDateTime("CreatedDate"),
+                    Section = reader.GetString("Section"),
+                    GradeLevel = reader.GetString("GradeLevel")
                 };
 
                 if (!reader.IsDBNull("GuardianId"))
@@ -193,6 +199,8 @@ namespace StudentAttendanceSystem.Data.Repositories
             command.Parameters.AddWithValue("@GuardianId", (object?)student.GuardianId ?? DBNull.Value);
             command.Parameters.AddWithValue("@RFIDCode", (object?)student.RFIDTag ?? DBNull.Value);
             command.Parameters.AddWithValue("@IsActive", student.IsActive);
+            command.Parameters.AddWithValue("@GradeLevel", student.GradeLevel);
+            command.Parameters.AddWithValue("@Section", student.Section);
 
             var outputParam = new SqlParameter("@StudentId", SqlDbType.Int)
             {
@@ -251,6 +259,8 @@ namespace StudentAttendanceSystem.Data.Repositories
             command.Parameters.AddWithValue("@GuardianId", (object?)student.GuardianId ?? DBNull.Value);
             command.Parameters.AddWithValue("@RFIDCode", (object?)student.RFIDTag ?? DBNull.Value);
             command.Parameters.AddWithValue("@IsActive", student.IsActive);
+            command.Parameters.AddWithValue("@GradeLevel", student.GradeLevel);
+            command.Parameters.AddWithValue("@Section", student.Section);
 
             // Add OUTPUT parameters
             var successParam = new SqlParameter("@Success", SqlDbType.Bit)
@@ -314,13 +324,20 @@ namespace StudentAttendanceSystem.Data.Repositories
                     GuardianId = reader.GetInt32("GuardianId"),
                     RFIDTag = reader.IsDBNull("RFIDCode") ? null : reader.GetString("RFIDCode"),
                     IsActive = reader.GetBoolean("IsActive"),
-                    CreatedDate = reader.GetDateTime("CreatedDate")
+                    CreatedDate = reader.GetDateTime("CreatedDate"),
+                    Section = reader.GetString("Section"),
+                    GradeLevel = reader.GetString("GradeLevel")
                 };
 
                 students.Add(student);
             }
 
             return students;
+        }
+
+        public async Task ValidateAttendanceActionAsync(int studentId, StudentAttendanceStatus? tempInOut)
+        {
+            throw new NotImplementedException();
         }
         #region
         //public async Task<Student?> GetStudentByRFIDAsync(string rfidCode)

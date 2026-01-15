@@ -1,10 +1,11 @@
 using System.Data;
 using System.Data.SqlClient;
+using StudentAttendanceSystem.Core.Interfaces;
 using StudentAttendanceSystem.Core.Models;
 
 namespace StudentAttendanceSystem.Data.Repositories
 {
-    public class AttendanceRepository
+    public class AttendanceRepository : IAttendanceRepository
     {
         private readonly DatabaseConnection _dbConnection;
 
@@ -60,6 +61,81 @@ namespace StudentAttendanceSystem.Data.Repositories
             }
 
             return records;
+        }
+
+        public async Task<StudentAttendanceStatus?> GetStudentAttendanceStatusAsync(int studentId)
+        {
+            using var connection = _dbConnection.GetConnection();
+            using var command = new SqlCommand("sp_GetStudentAttendanceStatus", connection)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+
+            command.Parameters.AddWithValue("@StudentId", studentId);
+
+            var currentStatusParam = new SqlParameter("@CurrentStatus", SqlDbType.NVarChar, 10)
+            {
+                Direction = ParameterDirection.Output
+            };
+            command.Parameters.Add(currentStatusParam);
+
+            var lastTimeStampParam = new SqlParameter("@LastTimeStamp", SqlDbType.DateTime)
+            {
+                Direction = ParameterDirection.Output
+            };
+            command.Parameters.Add(lastTimeStampParam);
+
+            await connection.OpenAsync();
+            await command.ExecuteNonQueryAsync();
+
+            var currentStatus = currentStatusParam.Value?.ToString();
+            var lastTimeStamp = lastTimeStampParam.Value as DateTime?;
+
+            if (string.IsNullOrEmpty(currentStatus))
+                return null;
+
+            return new StudentAttendanceStatus
+            {
+                StudentId = studentId,
+                CurrentStatus = currentStatus,
+                LastTimeStamp = lastTimeStamp
+            };
+        }
+
+        public async Task<AttendanceValidationResult> ValidateAttendanceActionAsync(int studentId, AttendanceType proposedType)
+        {
+            using var connection = _dbConnection.GetConnection();
+            using var command = new SqlCommand("sp_ValidateAttendanceAction", connection)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+
+            command.Parameters.AddWithValue("@StudentId", studentId);
+            command.Parameters.AddWithValue("@ProposedAttendanceType", proposedType.ToString());
+
+            var isValidParam = new SqlParameter("@IsValid", SqlDbType.Bit)
+            {
+                Direction = ParameterDirection.Output
+            };
+            command.Parameters.Add(isValidParam);
+
+            var validationMessageParam = new SqlParameter("@ValidationMessage", SqlDbType.NVarChar, 255)
+            {
+                Direction = ParameterDirection.Output
+            };
+            command.Parameters.Add(validationMessageParam);
+
+            await connection.OpenAsync();
+            await command.ExecuteNonQueryAsync();
+
+            var isValid = (bool)(isValidParam.Value ?? false);
+            var validationMessage = validationMessageParam.Value?.ToString() ?? string.Empty;
+
+            return new AttendanceValidationResult
+            {
+                IsValid = isValid,
+                ValidationMessage = validationMessage
+            };
         }
     }
 }
