@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\StudentAttendanceSystem.Core\StudentAttendanceSystem.Core.csproj" />
     <ProjectReference Include="..\StudentAttendanceSystem.Data\StudentAttendanceSystem.Data.csproj" />
+    <ProjectReference Include="..\StudentAttendanceSystem.Service\StudentAttendanceSystem.Service.csproj" />
   </ItemGroup>
 
 </Project>

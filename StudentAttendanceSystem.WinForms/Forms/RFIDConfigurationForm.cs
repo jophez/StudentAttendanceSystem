@@ -288,8 +288,6 @@ namespace StudentAttendanceSystem.WinForms.Forms
                     btnStopReading.Enabled = true;
                     MessageBox.Show("RFID Reader started. Please scan a card to test.", "Started", 
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    //var keyPressEventArgs = new KeyPressEventArgs((char)Keys.Enter);
-                    //txtCardData_KeyPress(_rfidReader, keyPressEventArgs);
                 }
             }
             catch (Exception ex)

@@ -1,6 +1,8 @@
 using StudentAttendanceSystem.Core.Models;
 using StudentAttendanceSystem.Data;
 using StudentAttendanceSystem.Data.Repositories;
+using StudentAttendanceSystem.Service.Forms;
+using System.Data.Common;
 
 namespace StudentAttendanceSystem.WinForms.Forms
 {
@@ -14,12 +16,12 @@ namespace StudentAttendanceSystem.WinForms.Forms
         private ToolStripStatusLabel lblUser;
         private ToolStripStatusLabel lblDateTime;
         private System.Windows.Forms.Timer timeTimer;
-
+        private DatabaseConnection? _dbConnection;
         public MainForm(User currentUser)
         {
             _currentUser = currentUser;
-            var dbConnection = new DatabaseConnection(DatabaseConnection.GetDefaultConnectionString());
-            _studentRepository = new StudentRepository(dbConnection);
+            _dbConnection = new DatabaseConnection(DatabaseConnection.GetDefaultConnectionString());
+            _studentRepository = new StudentRepository(_dbConnection);
             InitializeComponent();
             LoadStudentData();
             SetupTimer();
@@ -59,6 +61,7 @@ namespace StudentAttendanceSystem.WinForms.Forms
 
                 var studentMenu = new ToolStripMenuItem("Student");
                 studentMenu.DropDownItems.Add("Manage Students", null, ManageStudents_Click);
+                studentMenu.DropDownItems.Add("Track Attendance", null, ManageAttendance_Click);
 
                 var guardianMenu = new ToolStripMenuItem("Guardian");
                 guardianMenu.DropDownItems.Add("Manage Guardians", null, ManageGuardians_Click);
@@ -80,6 +83,7 @@ namespace StudentAttendanceSystem.WinForms.Forms
                 // Regular user menu items
                 var studentMenu = new ToolStripMenuItem("Student");
                 studentMenu.DropDownItems.Add("View/Update Students", null, ViewUpdateStudents_Click);
+                studentMenu.DropDownItems.Add("Track Attendance", null, ManageAttendance_Click);
 
                 var guardianMenu = new ToolStripMenuItem("Guardian");
                 guardianMenu.DropDownItems.Add("View/Update Guardians", null, ViewUpdateGuardians_Click);
@@ -208,6 +212,13 @@ namespace StudentAttendanceSystem.WinForms.Forms
             var studentManagementForm = new StudentManagementForm();
             studentManagementForm.FormClosed += (s, args) => LoadStudentData();
             studentManagementForm.ShowDialog();
+        }
+
+        private void ManageAttendance_Click(object? sender, EventArgs e)
+        {
+            var studentAttendanceForm = new AttendanceDisplayForm(_dbConnection);
+            studentAttendanceForm.FormClosed += (s, args) => LoadStudentData();
+            studentAttendanceForm.ShowDialog();
         }
 
         private void ManageGuardians_Click(object sender, EventArgs e)

@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup />
+  <ItemGroup>
+    <Compile Update="Forms\GuardianManagementForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\GuardianViewUpdateForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\LoginForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\MainForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\RFIDConfigurationForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\RFIDGeneratorForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\SMSConfigurationForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\SMSLogsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\StudentDetailForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\StudentManagementForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\StudentViewUpdateForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\UserManagementForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+  </ItemGroup>
+</Project>
