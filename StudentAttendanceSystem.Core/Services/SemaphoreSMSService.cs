@@ -22,7 +22,7 @@ namespace StudentAttendanceSystem.Core.Services
             _configuration = configuration;
             _logSMS = logSMS;
             _httpClient = new HttpClient();
-            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {configuration.ApiKey}");
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Token {configuration.ApiKey}");
         }
 
         public SemaphoreSMSService(SMSConfiguration currentConfig, Func<int?, string, string, SMSStatus, string?, string?, Task<int>> logSMSAsync)
@@ -37,14 +37,14 @@ namespace StudentAttendanceSystem.Core.Services
             {
                 // Format phone number (ensure it starts with +63 for Philippines)
                 var formattedNumber = FormatPhoneNumber(phoneNumber);
-                
+
                 var payload = new
                 {
-                    apikey = _configuration.ApiKey,
                     number = formattedNumber,
                     message = message,
                     sendername = _configuration.SenderName
                 };
+
 
                 var json = JsonSerializer.Serialize(payload);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -58,8 +58,8 @@ namespace StudentAttendanceSystem.Core.Services
                 if (response.IsSuccessStatusCode)
                 {
                     var semaphoreResponse = JsonSerializer.Deserialize<SemaphoreResponse>(responseContent);
-                    
-                    if (semaphoreResponse?.Status == "success")
+
+                    if (semaphoreResponse?.Status?.Equals("Success", StringComparison.OrdinalIgnoreCase) == true)
                     {
                         // Update log as sent
                         await UpdateSMSLog(logId, SMSStatus.Sent, responseContent);
@@ -126,12 +126,12 @@ namespace StudentAttendanceSystem.Core.Services
         public async Task<SMSResult> SendBulkSMSAsync(List<SMSRequest> requests)
         {
             var results = new List<SMSResult>();
-            
+
             foreach (var request in requests)
             {
                 var result = await SendSMSAsync(request.PhoneNumber, request.Message, request.StudentId);
                 results.Add(result);
-                
+
                 // Small delay between sends to avoid rate limiting
                 await Task.Delay(100);
             }
@@ -156,15 +156,15 @@ namespace StudentAttendanceSystem.Core.Services
                 // Semaphore account info endpoint to test connection
                 var accountUrl = "https://api.semaphore.co/api/v4/account";
                 var response = await _httpClient.GetAsync(accountUrl);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
                     var accountInfo = JsonSerializer.Deserialize<SemaphoreAccountResponse>(content);
-                    return accountInfo?.Status == "success";
+                    return !string.IsNullOrEmpty(accountInfo?.AccountName);
                 }
-                
                 return false;
+
             }
             catch
             {
@@ -178,14 +178,14 @@ namespace StudentAttendanceSystem.Core.Services
             {
                 var accountUrl = "https://api.semaphore.co/api/v4/account";
                 var response = await _httpClient.GetAsync(accountUrl);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
                     var accountInfo = JsonSerializer.Deserialize<SemaphoreAccountResponse>(content);
                     return accountInfo?.CreditBalance ?? 0;
                 }
-                
+
                 return 0;
             }
             catch
@@ -198,7 +198,7 @@ namespace StudentAttendanceSystem.Core.Services
         {
             // Remove all non-digit characters
             var digitsOnly = new string(phoneNumber.Where(char.IsDigit).ToArray());
-            
+
             // Handle different Philippine number formats
             if (digitsOnly.StartsWith("63"))
             {
@@ -216,7 +216,7 @@ namespace StudentAttendanceSystem.Core.Services
             {
                 return "+63" + digitsOnly.Substring(1); // Standard format
             }
-            
+
             // Default: assume it needs +63 prefix
             return "+63" + digitsOnly;
         }
