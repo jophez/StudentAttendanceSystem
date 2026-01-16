@@ -17,11 +17,11 @@ VALUES
 ('Rosa', 'Garcia', '+639456789123', 'rosa.garcia@email.com', 1);
 
 -- Insert sample students
-INSERT INTO Students (StudentNumber, FirstName, MiddleName, LastName, CellPhone, Email, StreetAddress, Barangay, Municipality, City, GuardianId, IsActive)
+INSERT INTO Students (StudentNumber, FirstName, MiddleName, LastName, CellPhone, Email, ImagePath, StreetAddress, Barangay, Municipality, City, GuardianId, RFIDCode, IsActive, CreatedDate, ModifiedDate)
 VALUES 
-('2024-001', 'Pedro', 'Miguel', 'Santos', '+639111111111', 'pedro.santos@student.com', '123 Main St', 'Poblacion', 'Sample Municipality', 'Sample City', 1, 1),
-('2024-002', 'Ana', 'Rose', 'Cruz', '+639222222222', 'ana.cruz@student.com', '456 Oak Ave', 'San Jose', 'Sample Municipality', 'Sample City', 2, 1),
-('2024-003', 'Luis', 'Antonio', 'Garcia', '+639333333333', 'luis.garcia@student.com', '789 Pine Rd', 'Santa Maria', 'Sample Municipality', 'Sample City', 3, 1);
+('2024-001', 'Pedro', 'Miguel', 'Santos', '+639111111111', 'pedro.santos@student.com', 'C:\', '123 Main St', 'Poblacion', 'Sample Municipality', 'Sample City', 1, '0092268113', 1, GETDATE(), GETDATE()),
+('2024-002', 'Ana', 'Rose', 'Cruz', '+639222222222', 'ana.cruz@student.com', 'C:\', '456 Oak Ave', 'San Jose', 'Sample Municipality', 'Sample City', 2, '250810162381',1,GETDATE(), GETDATE()),
+('2024-003', 'Luis', 'Antonio', 'Garcia', '+639333333333', 'luis.garcia@student.com', 'C:\', '789 Pine Rd', 'Santa Maria', 'Sample Municipality', 'Sample City', 3, '0969388083',1,GETDATE(), GETDATE());
 
 -- Insert SMS Configuration for Semaphore
 INSERT INTO SMSConfiguration (ProviderName, ApiKey, ApiUrl, SenderName, IsActive)
