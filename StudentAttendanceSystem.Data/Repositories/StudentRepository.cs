@@ -394,5 +394,4 @@ namespace StudentAttendanceSystem.Data.Repositories
         //}
         #endregion
     }
-
 }
