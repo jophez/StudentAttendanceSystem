@@ -1107,7 +1107,7 @@ BEGIN
                 Municipality = ISNULL(@Municipality, Municipality),
                 City = ISNULL(@City, City),
                 GuardianId = CASE WHEN @GuardianId IS NOT NULL THEN @GuardianId ELSE GuardianId END,
-                RFIDCode = ISNULL(@RFIDCode, RFIDCode),
+                RFIDCode = @RFIDCode,  -- Direct assignment - will update even to NULL,
                 IsActive = CASE WHEN @IsActive IS NOT NULL THEN @IsActive ELSE IsActive END,
                 ModifiedDate = GETDATE()
             WHERE StudentId = @StudentId;
