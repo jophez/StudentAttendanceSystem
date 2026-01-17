@@ -79,7 +79,7 @@ namespace StudentAttendanceSystem.Service.Forms
                         }
                         var result = await _attendanceRepository.RecordAttendanceAsync(studentId, (AttendanceType)Enum.Parse(typeof(AttendanceType), _lastAttendanceStatus.CurrentStatus));
                         UpdateDebugInfo($"Attendance recorded: Student {studentId}, Type: {type}");
-                        return result;
+                        return result.Item1;
                     }
                     catch (Exception ex)
                     {
@@ -560,7 +560,20 @@ namespace StudentAttendanceSystem.Service.Forms
                         {
                             await _notificationService.SendAttendanceNotificationAsync(e.Student, (AttendanceType)Enum.Parse(typeof(AttendanceType), _lastAttendanceStatus.CurrentStatus), e.ScanTime);
                             var result = await _attendanceRepository.RecordAttendanceAsync(e.Student.StudentId, (AttendanceType)Enum.Parse(typeof(AttendanceType), _lastAttendanceStatus.CurrentStatus));
-                            UpdateDebugInfo("SMS notification sent");
+                            if(result.Item2 != string.Empty)
+                            {
+                                if(this.InvokeRequired)
+                                {
+                                    this.Invoke(() =>
+                                    {
+                                        MessageBox.Show(this,$"Attendance recording error: {result.Item2}","Error",MessageBoxButtons.OK,MessageBoxIcon.Error);
+                                    });
+                                }
+                                else
+                                    MessageBox.Show(this,$"Attendance recording error: {result.Item2}","Error",MessageBoxButtons.OK,MessageBoxIcon.Error);
+                            }
+                            else
+                                UpdateDebugInfo("SMS notification sent");
                         }
                         else
                         {
