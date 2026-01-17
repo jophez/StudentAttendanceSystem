@@ -6,7 +6,7 @@ namespace StudentAttendanceSystem.Core.Models
         public int StudentId { get; set; }
         public string? RFIDTag { get; set; }
         public Student? Student { get; set; }
-        public DateTime TimeIn { get; set; }
+        public DateTime? TimeIn { get; set; }
         public DateTime? TimeOut { get; set; }
         public AttendanceType Type { get; set; }
         public string? Notes { get; set; }
