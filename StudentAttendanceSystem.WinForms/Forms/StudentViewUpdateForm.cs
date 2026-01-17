@@ -311,8 +311,8 @@ namespace StudentAttendanceSystem.WinForms.Forms
                 var attendanceRecords = await _attendanceRepository.GetAttendanceByStudentIdAsync(studentId);
                 var displayData = attendanceRecords.OrderByDescending(a => a.TimeIn).Take(20).Select(a => new
                 {
-                    Date = a.TimeIn.ToString("yyyy-MM-dd") ?? "Unknown",
-                    TimeIn = a.TimeIn.ToString("HH:mm:ss") ?? "Not recorded",
+                    Date = a.TimeIn.ToString() ?? "Unknown",
+                    TimeIn = a.TimeIn.ToString() ?? "Not recorded",
                     TimeOut = a.TimeOut?.ToString("HH:mm:ss") ?? "Not recorded",
                     Status = a.TimeOut.HasValue ? "Complete" : "Time In Only"
                 }).ToList();

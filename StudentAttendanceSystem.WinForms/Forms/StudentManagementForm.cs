@@ -48,7 +48,7 @@ namespace StudentAttendanceSystem.WinForms.Forms
         private void InitializeComponent()
         {
             this.SuspendLayout();
-
+            this.MaximizeBox = false;
             // Form properties
             this.Text = "Student Management";
             this.Size = new Size(1200, 750);
@@ -558,6 +558,7 @@ namespace StudentAttendanceSystem.WinForms.Forms
             txtCity.ReadOnly = !isEditing;
             cmbGuardian.Enabled = isEditing;
             chkIsActive.Enabled = isEditing;
+            txtRFIDCode.ReadOnly = !isEditing;
 
             // Image browse button should be enabled during create/update only
             btnBrowseImage.Enabled = isEditing;

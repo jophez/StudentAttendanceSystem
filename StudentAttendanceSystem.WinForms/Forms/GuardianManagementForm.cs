@@ -35,7 +35,7 @@ namespace StudentAttendanceSystem.WinForms.Forms
         private void InitializeComponent()
         {
             this.SuspendLayout();
-
+            this.MaximizeBox = false;
             // Form properties
             this.Text = "Guardian Management";
             this.Size = new Size(1000, 600);

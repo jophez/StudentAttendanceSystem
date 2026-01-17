@@ -188,11 +188,11 @@ namespace StudentAttendanceSystem.WinForms.Forms
                     {
                         g.FillRectangle(Brushes.LightGray, 0, 0, 100, 100);
                         g.DrawRectangle(Pens.DarkGray, 0, 0, 99, 99);
-                        
+
                         // Draw simple student icon
                         g.FillEllipse(Brushes.DarkGray, 35, 20, 30, 30);
                         g.FillRectangle(Brushes.DarkGray, 30, 60, 40, 30);
-                        
+
                         var font = new Font("Arial", 8);
                         g.DrawString("No Photo", font, Brushes.Black, 25, 85);
                     }
@@ -221,7 +221,7 @@ namespace StudentAttendanceSystem.WinForms.Forms
             lblLastName.Text = $"Last Name: {_student.LastName}";
             lblCellPhone.Text = $"Cell Phone: {_student.CellPhone}";
             lblEmail.Text = $"Email: {_student.Email}";
-            
+
             lblAddress.Text = $"Address: {_student.StreetAddress}, {_student.Barangay}, " +
                             $"{_student.Municipality}, {_student.City}";
 
@@ -239,7 +239,7 @@ namespace StudentAttendanceSystem.WinForms.Forms
             }
 
             // This would normally load from attendance records
-            lblTimeInOut.Text = "Time In/Out: Not Available Today\n(RFID scanning functionality to be implemented)";
+            lblTimeInOut.Text = $"Date: {_student.AttendanceRecords.First().TimeIn?.ToString("MM-dd-yyyy") ?? "N/A"}\nTimeIN: {_student.AttendanceRecords.First().TimeIn?.ToString("HH:mm:ss") ?? "N/A"} | TimeOUT: {_student.AttendanceRecords.First().TimeOut?.ToString("HH:mm:ss") ?? "N/A"}";
         }
 
         private void BtnClose_Click(object sender, EventArgs e)

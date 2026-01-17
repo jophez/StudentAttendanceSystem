@@ -30,7 +30,7 @@ namespace StudentAttendanceSystem.WinForms.Forms
         private void InitializeComponent()
         {
             this.SuspendLayout();
-
+            this.MaximizeBox = false;
             // Form properties
             this.Text = "RFID Generator";
             this.Size = new Size(1000, 650);
@@ -95,7 +95,7 @@ namespace StudentAttendanceSystem.WinForms.Forms
             { 
                 Location = new Point(20, 160), 
                 Size = new Size(200, 25),
-                ReadOnly = true,
+                ReadOnly = false,
                 BackColor = Color.White
             };
 
