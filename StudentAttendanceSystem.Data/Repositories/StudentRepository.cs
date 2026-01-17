@@ -45,8 +45,8 @@ namespace StudentAttendanceSystem.Data.Repositories
                     RFIDTag = reader.IsDBNull("RFIDCode") ? null : reader.GetString("RFIDCode"),
                     IsActive = reader.GetBoolean("IsActive"),
                     CreatedDate = reader.GetDateTime("CreatedDate")
-                   // Section = reader.IsDBNull(reader.GetString("Section")) ? "Einstein" : reader.GetString("Section"),
-                   // GradeLevel = reader.IsDBNull(reader.GetString("GradeLevel")) ? "Grade 10" : reader.GetString("GradeLevel")
+                    // Section = reader.IsDBNull(reader.GetString("Section")) ? "Einstein" : reader.GetString("Section"),
+                    // GradeLevel = reader.IsDBNull(reader.GetString("GradeLevel")) ? "Grade 10" : reader.GetString("GradeLevel")
                 };
 
                 if (!reader.IsDBNull("GuardianId"))
@@ -99,7 +99,13 @@ namespace StudentAttendanceSystem.Data.Repositories
                     GuardianId = reader.IsDBNull("GuardianId") ? null : reader.GetInt32("GuardianId"),
                     RFIDTag = reader.IsDBNull("RFIDCode") ? null : reader.GetString("RFIDCode"),
                     IsActive = reader.GetBoolean("IsActive"),
-                    CreatedDate = reader.GetDateTime("CreatedDate")
+                    CreatedDate = reader.GetDateTime("CreatedDate"),
+                    AttendanceRecords = new List<AttendanceRecord>() {
+                        new AttendanceRecord() {
+                            TimeIn = reader.IsDBNull("TimeIn") ? null: reader.GetDateTime("TimeIn"),
+                            TimeOut = reader.IsDBNull("TimeOut") ? null : reader.GetDateTime("TimeOut"),
+                            Type = reader.IsDBNull("Type") ? 0 : (AttendanceType)reader.GetInt32("Type")
+                        } }
                     //Section = reader.GetString("Section"),
                     //GradeLevel = reader.GetString("GradeLevel")
                 };
@@ -154,7 +160,9 @@ namespace StudentAttendanceSystem.Data.Repositories
                     GuardianId = reader.IsDBNull("GuardianId") ? null : reader.GetInt32("GuardianId"),
                     RFIDTag = reader.IsDBNull("RFIDCode") ? null : reader.GetString("RFIDCode"),
                     IsActive = reader.GetBoolean("IsActive"),
-                    CreatedDate = reader.GetDateTime("CreatedDate")
+                    CreatedDate = reader.GetDateTime("CreatedDate"),
+                    Section = "Einstein",
+                    GradeLevel = "Grade 10"
                     //Section = reader.GetString("Section"),
                     //GradeLevel = reader.GetString("GradeLevel")
                 };

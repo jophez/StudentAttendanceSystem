@@ -1,3 +1,4 @@
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using StudentAttendanceSystem.Core.Interfaces;
@@ -8,27 +9,36 @@ namespace StudentAttendanceSystem.Data.Repositories
     public class AttendanceRepository : IAttendanceRepository
     {
         private readonly DatabaseConnection _dbConnection;
-
+        private readonly string _durationInMinutes = ConfigurationManager.AppSettings["Duration"].ToString();
         public AttendanceRepository(DatabaseConnection dbConnection)
         {
             _dbConnection = dbConnection;
         }
 
-        public async Task<bool> RecordAttendanceAsync(int studentId, AttendanceType type, string? notes = null)
+        public async Task<(bool, string)> RecordAttendanceAsync(int studentId, AttendanceType type, string? notes = null)
         {
-            using var connection = _dbConnection.GetConnection();
-            using var command = new SqlCommand("sp_RecordAttendance", connection)
+            try
             {
-                CommandType = CommandType.StoredProcedure
-            };
+                using var connection = _dbConnection.GetConnection();
+                using var command = new SqlCommand("sp_RecordAttendance", connection)
+                {
+                    CommandType = CommandType.StoredProcedure
+                };
 
-            command.Parameters.AddWithValue("@StudentId", studentId);
-            command.Parameters.AddWithValue("@Type", (int)type);
-            command.Parameters.AddWithValue("@Notes", (object?)notes ?? DBNull.Value);
+                command.Parameters.AddWithValue("@StudentId", studentId);
+                command.Parameters.AddWithValue("@Type", (int)type);
+                command.Parameters.AddWithValue("@Notes", (object?)notes ?? DBNull.Value);
+                command.Parameters.AddWithValue("@MinimumMinutes", int.Parse(_durationInMinutes));
 
-            await connection.OpenAsync();
-            var rowsAffected = await command.ExecuteNonQueryAsync();
-            return rowsAffected > 0;
+                await connection.OpenAsync();
+                var rowsAffected = await command.ExecuteNonQueryAsync();
+                return (rowsAffected > 0, string.Empty);
+            }
+            catch (Exception ex)
+            {
+               (bool, string) result = new (false, ex.Message);
+                return result;
+            }
         }
 
         public async Task<List<AttendanceRecord>> GetAttendanceByStudentIdAsync(int studentId)
@@ -52,7 +62,7 @@ namespace StudentAttendanceSystem.Data.Repositories
                 {
                     AttendanceId = reader.GetInt32("AttendanceId"),
                     StudentId = reader.GetInt32("StudentId"),
-                    TimeIn = reader.IsDBNull("TimeIn") ? dateTime : reader.GetDateTime("TimeIn"),
+                    TimeIn = reader.IsDBNull("TimeIn") ? null : reader.GetDateTime("TimeIn"),
                     TimeOut = reader.IsDBNull("TimeOut") ? null : reader.GetDateTime("TimeOut"),
                     Type = (AttendanceType)reader.GetInt32("Type"),
                     Notes = reader.IsDBNull("Notes") ? null : reader.GetString("Notes"),
