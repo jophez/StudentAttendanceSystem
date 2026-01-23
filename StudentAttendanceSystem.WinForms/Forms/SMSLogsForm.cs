@@ -188,11 +188,9 @@ namespace StudentAttendanceSystem.WinForms.Forms
                 // Filter by status if not "All"
                 if (cmbStatus.SelectedIndex > 0)
                 {
-                    var selectedStatus = (SMSStatus)(cmbStatus.SelectedIndex);
-                    logs = logs.Where(l =>
-                    {
-                        return l.Status.Equals(selectedStatus);
-                    }).ToList();
+                    var selectedStatus = (StudentAttendanceSystem.Core.Models.SMSStatus)cmbStatus.SelectedIndex;
+
+                    logs = logs.Where(l => l.Status == selectedStatus).ToList();
                 }
 
                 var displayData = logs.Select(log => new
