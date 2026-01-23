@@ -3,6 +3,7 @@ using StudentAttendanceSystem.Core.Models;
 using StudentAttendanceSystem.Core.Services;
 using StudentAttendanceSystem.Data;
 using StudentAttendanceSystem.Data.Repositories;
+using System.Configuration;
 
 namespace StudentAttendanceSystem.WinForms.Forms
 {
@@ -49,6 +50,7 @@ namespace StudentAttendanceSystem.WinForms.Forms
         private Button btnSave;
         private Button btnCancel;
         private Button btnViewLogs;
+        private int _testStudentId = int.Parse(ConfigurationManager.AppSettings["TestStudentId"] ?? "0");
 
         public SMSConfigurationForm()
         {
@@ -419,7 +421,11 @@ namespace StudentAttendanceSystem.WinForms.Forms
         {
             if (_currentConfig == null) return;
 
-            _smsService = new SemaphoreSMSService(_currentConfig, _smsRepository.LogSMSAsync);
+            _smsService = new SemaphoreSMSService(
+                _currentConfig,
+                _smsRepository.LogSMSAsync,
+                _smsRepository.UpdateSMSLogAsync
+            );
         }
 
         private async void BtnTestConnection_Click(object sender, EventArgs e)
@@ -491,7 +497,7 @@ namespace StudentAttendanceSystem.WinForms.Forms
                 btnSendTestSMS.Enabled = false;
                 btnSendTestSMS.Text = "Sending...";
 
-                var result = await _smsService.SendSMSAsync(txtTestPhone.Text, txtTestMessage.Text);
+                var result = await _smsService.SendSMSAsync(txtTestPhone.Text, txtTestMessage.Text, _testStudentId);
                 
                 if (result.Success)
                 {
