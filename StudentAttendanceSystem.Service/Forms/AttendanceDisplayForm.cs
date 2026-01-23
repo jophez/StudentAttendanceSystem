@@ -415,13 +415,13 @@ namespace StudentAttendanceSystem.Service.Forms
                 var smsConfig = await _smsRepository.GetActiveSMSConfigurationAsync();
                 UpdateDebugInfo($"SMS Config loaded: {(smsConfig != null ? "Success" : "None found")}");
 
-                // Create SMS logger delegate
-                Func<int?, string, string, SMSStatus, string?, Task<int>> smsLogger =
-                    async (studentId, phoneNumber, message, status, errorMessage) =>
+                // FIXED: Create SMS logger delegate with all required parameters
+                Func<int?, string, string, SMSStatus, string?, string?, Task<int>> smsLogger =
+                    async (studentId, phoneNumber, message, status, errorMessage, providerResponse) =>
                     {
                         try
                         {
-                            return await _smsRepository.LogSMSAsync(studentId, phoneNumber, message, status, errorMessage, null);
+                            return await _smsRepository.LogSMSAsync(studentId, phoneNumber, message, status, errorMessage, providerResponse);
                         }
                         catch (Exception ex)
                         {
@@ -430,9 +430,33 @@ namespace StudentAttendanceSystem.Service.Forms
                         }
                     };
 
+                // FIXED: Create SMS update delegate (missing parameter)
+                Func<int, SMSStatus, string?, string?, Task<bool>> smsUpdater =
+                    async (logId, status, errorMessage, providerResponse) =>
+                    {
+                        try
+                        {
+                            return await _smsRepository.UpdateSMSLogAsync(logId, status, errorMessage, providerResponse);
+                        }
+                        catch (Exception ex)
+                        {
+                            UpdateDebugInfo($"SMS Update Error: {ex.Message}");
+                            return false;
+                        }
+                    };
+
+                // FIXED: Pass all three required parameters to SemaphoreSMSService
                 var smsService = new SemaphoreSMSService(
-                    smsConfig ?? new SMSConfiguration(),
-                    smsLogger
+                    smsConfig ?? new SMSConfiguration
+                    {
+                        ProviderName = "Semaphore",
+                        ApiUrl = "https://api.semaphore.co/api/v4/messages",
+                        ApiKey = "",
+                        SenderName = "School",
+                        IsActive = false
+                    },
+                    smsLogger,
+                    smsUpdater  // <-- This was missing!
                 );
 
                 _notificationService = new NotificationService(smsService, async () => await _smsRepository.GetActiveSMSConfigurationAsync());
